@@ -43,9 +43,19 @@ app.get("/get-properties", async (req, res) => {
   document = await io.read("smooth.glb");
 
   const response = await inspect(document);
+  const result = response.meshes
+
+  let totalVertices = 0;
+  let totalTriangles = 0;
+
+  result.properties.forEach(obj => {
+      totalVertices += obj.vertices;
+      totalTriangles += obj.glPrimitives
+  });
 
   res.send({
-    response,
+    totalVertices,
+    totalTriangles
   });
 });
 
