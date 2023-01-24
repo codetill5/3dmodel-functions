@@ -6,6 +6,7 @@ const request = require("request");
 const { simplify, weld, inspect } = require("@gltf-transform/functions");
 const { MeshoptSimplifier } = require("meshoptimizer");
 const { NodeIO } = require("@gltf-transform/core");
+const obj2gltf = require("obj2gltf");
 
 const io = new NodeIO();
 
@@ -74,6 +75,20 @@ app.post("/convert/gltf-to-glb", async (req, res) => {
     fsExtra.writeFileSync("convert.glb", results.glb);
   });
 });
+
+
+app.post("/convert/obj-to-glb", async (req, res) => {
+  const options = {
+    binary: true,
+  };
+  obj2gltf("core/forage cap.obj", options).then(function (glb) {
+    fsExtra.writeFileSync("coreitbro.glb", glb);
+  });
+});
+
+
+
+
 
 const port = 3002;
 app.listen(port, () => {
