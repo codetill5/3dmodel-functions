@@ -3,7 +3,7 @@ const gltfPipeline = require("gltf-pipeline");
 const fsExtra = require("fs-extra");
 const ngrok = require("ngrok");
 const request = require("request");
-const sharp = require('sharp');
+const sharp = require("sharp");
 const {
   simplify,
   weld,
@@ -21,10 +21,12 @@ const {
   dedup,
 } = require("@gltf-transform/functions");
 const { MeshoptSimplifier } = require("meshoptimizer");
+const path = require('path');
 
 const { NodeIO } = require("@gltf-transform/core");
 const obj2gltf = require("obj2gltf");
-const draco3d = require("draco3dgltf");
+// const draco3d = require("draco3dgltf");
+const puppeteer = require("puppeteer");
 
 const io = new NodeIO();
 
@@ -34,7 +36,7 @@ app.post("/compression", async (req, res) => {
   const processGlb = gltfPipeline.processGlb;
 
   const glb = fsExtra.readFileSync("gas.glb");
-const options = {
+  const options = {
     dracoOptions: {
       compressionLevel: 10,
       // compressMeshes: true,
@@ -59,7 +61,7 @@ app.post("/simplify", async (req, res) => {
   await io.write("simplechrist.glb", document);
 });
 
-//Optimize model by all available methods 
+//Optimize model by all available methods
 app.post("/optimize", async (req, res) => {
   let document;
   document = await io.read("washinton.glb");
@@ -70,16 +72,15 @@ app.post("/optimize", async (req, res) => {
     // flatten(),
     // dequantize(),
     // join(),
-    weld({ tolerance: 0.0001 }),     //WORKS
-    simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.001 }),   //WORKS
+    weld({ tolerance: 0.0001 }), //WORKS
+    simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.001 }), //WORKS
     // resample(),
     // prune(),
     // sparse(),
-    textureCompress({encoder: sharp,  targetFormat: 'webp'}),    
-    draco()   //WORKS
+    textureCompress({ encoder: sharp, targetFormat: "webp" }),
+    draco() //WORKS
   );
 
-  
   await io.write("dc.glb", document);
 });
 
@@ -129,6 +130,51 @@ app.post("/convert/obj-to-glb", async (req, res) => {
   });
 });
 
+app.post('/generate/thumbnails', async (req, res) => {
+  const { url } = req.query; 
+
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+
+  await page.goto(url); 
+  await page.waitForFunction(() => {
+    const modelViewer = document.querySelector('model-viewer');
+    return modelViewer && modelViewer.loaded;
+  });
+  await page.screenshot({ path: 'car.png' });
+
+  await browser.close();
+
+  res.sendStatus(200);
+});
+
+app.get('/generate/thumbnail', async (req, res) => {
+  const { url } = req.query; // Retrieve the URL from the query parameters
+
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+
+  await page.goto(url); // Use the retrieved URL
+  await page.waitForFunction(() => {
+    const modelViewer = document.querySelector('model-viewer');
+    return modelViewer && modelViewer.loaded;
+  });
+
+  const imagePath = path.join(__dirname, 'car.png');
+  await page.screenshot({ path: imagePath });
+
+  await browser.close();
+
+  res.download(imagePath, 'thumbnail.png', (err) => {
+    if (err) {
+      console.error('Error downloading image:', err);
+      res.sendStatus(500);
+    } else {
+      // Delete the image file after it's been sent to the client
+      fsExtra.unlinkSync(imagePath);
+    }
+  });
+});
 
 const port = 3002;
 app.listen(port, () => {
